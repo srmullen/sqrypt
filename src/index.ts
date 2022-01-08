@@ -1,3 +1,12 @@
 #!/usr/bin/env node
 
-console.log('sqrypt is tool for creating awesome npm/yarn scripts directly in your package.json');
+import { spawn } from 'cross-spawn';
+import { hideBin } from 'yargs/helpers';
+
+const args = hideBin(process.argv);
+
+const [command, ...options] = args;
+
+const proc = spawn(command, options, {
+  stdio: 'inherit'
+});
