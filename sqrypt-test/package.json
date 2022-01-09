@@ -9,6 +9,22 @@
     "reverse-args": "sqrypt echo %1 %0",
     "three-args": "sqrypt %2 %1 %0"
   },
+  "sqrypt": {
+    "reverse-args": {
+      "questions": [
+        { 
+          "type": "input",
+          "message": "First arg?",
+          "name": "0"
+        },
+        { 
+          "type": "input",
+          "message": "Second arg?",
+          "name": "1"
+        }
+      ]
+    }
+  },
   "author": "",
   "license": "ISC",
   "dependencies": {
