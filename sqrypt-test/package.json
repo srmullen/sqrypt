@@ -4,12 +4,15 @@
   "description": "tests",
   "main": "index.js",
   "scripts": {
-    "test": "sqrypt node ./main.js",
-    "doit": "sqrypt"
+    "jest": "sqrypt jest",
+    "jest:spec": "sqrypt jest %1",
+    "reverse-args": "sqrypt echo %1 %0",
+    "three-args": "sqrypt %2 %1 %0"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "jest": "^27.4.7",
     "sqrypt": "file:.."
   }
 }
