@@ -7,17 +7,18 @@
     "jest": "sqrypt jest",
     "jest:spec": "sqrypt jest %1",
     "reverse-args": "sqrypt echo %1 %0",
-    "three-args": "sqrypt %2 %1 %0"
+    "input-command": "sqrypt %2 %1 %0",
+    "choose-from-list": "sqrypt echo ./package.json[_]?"
   },
   "sqrypt": {
     "reverse-args": {
       "questions": [
-        { 
+        {
           "type": "input",
           "message": "First arg?",
           "name": "0"
         },
-        { 
+        {
           "type": "input",
           "message": "Second arg?",
           "name": "1"

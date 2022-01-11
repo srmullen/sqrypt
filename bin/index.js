@@ -17,31 +17,54 @@ const fs_1 = __importDefault(require("fs"));
 const cross_spawn_1 = require("cross-spawn");
 const helpers_1 = require("yargs/helpers");
 const inquirer_1 = __importDefault(require("inquirer"));
-function assertString(inp) {
-    if (typeof inp === 'string') {
-        return inp;
-    }
-    else {
-        throw new Error(`script not found`);
-    }
+const yaml_1 = __importDefault(require("yaml"));
+const lodash_topath_1 = __importDefault(require("lodash.topath"));
+const utils_1 = require("./utils");
+function gatherQuestions(pkg, scriptName, scriptParams) {
+    // const questions = pkg.sqrypt?.[scriptName]?.questions;
+    // return questions;
+    const questions = [];
+    const files = {};
+    const FILE_RE = /(^.*\.(json|yml|yaml))\[(_)\]/;
+    scriptParams.map(param => {
+        const match = param.match(FILE_RE);
+        if (match) {
+            const [, filename, ext, path] = match;
+            // console.log(`${param}: ${filename} - ${path}`);
+            if (!files[filename]) {
+                if (ext === 'json') {
+                    const file = fs_1.default.readFileSync(filename, 'utf-8');
+                    files[filename] = JSON.parse(file);
+                }
+                else if (ext === 'yaml' || ext === 'yml') {
+                    const file = fs_1.default.readFileSync(filename, 'utf-8');
+                    files[filename] = yaml_1.default.parse(file);
+                }
+            }
+            const options = (0, utils_1.getPathValues)(files[filename], (0, lodash_topath_1.default)(path));
+            questions.push({
+                type: 'checkbox',
+                message: `Input: `,
+                name: 'q1',
+                choices: options
+            });
+        }
+    });
+    return questions;
 }
 function main() {
-    var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
         const pkg = JSON.parse(fs_1.default.readFileSync('./package.json', 'utf-8'));
-        const scriptName = assertString(process.env.npm_lifecycle_event);
+        const scriptName = (0, utils_1.assertString)(process.env.npm_lifecycle_event);
         const script = pkg.scripts[scriptName];
-        const questions = (_b = (_a = pkg.sqrypt) === null || _a === void 0 ? void 0 : _a[scriptName]) === null || _b === void 0 ? void 0 : _b.questions;
         const args = (0, helpers_1.hideBin)(process.argv);
         const scriptParams = script.split(/\s+/).slice(1);
         const input = args.slice(scriptParams.length);
-        // console.log("script: ", script);
-        // console.log("args: ", args);
-        // console.log(script.split(/\s+/).slice(1));
-        // console.log({scriptParams});
-        // console.log({input});
-        const prompt = yield inquirer_1.default.prompt(questions);
-        // const OPTION_RE = /\{([0-9]+)\}/
+        // console.log(scriptParams);
+        const questions = gatherQuestions(pkg, scriptName, scriptParams);
+        const prompt = questions
+            ? yield inquirer_1.default.prompt(questions)
+            : {};
         const OPTION_RE = /%(\d+)/;
         const command = scriptParams.map((option) => {
             const match = option.match(OPTION_RE);

@@ -3,14 +3,46 @@
 import fs from 'fs';
 import { spawn } from 'cross-spawn';
 import { hideBin } from 'yargs/helpers';
-import inquirer from 'inquirer';
+import inquirer, { DistinctQuestion, QuestionCollection } from 'inquirer';
+import YAML from 'yaml';
+import topath from 'lodash.topath';
+import { assertString, getPathValues } from './utils';
 
-function assertString(inp: any): string {
-  if (typeof inp === 'string') {
-    return inp;
-  } else {
-    throw new Error(`script not found`);
-  }
+function gatherQuestions(pkg: Record<any, any>, scriptName: string, scriptParams: string[]): Option<QuestionCollection> {
+  // const questions = pkg.sqrypt?.[scriptName]?.questions;
+  // return questions;
+
+  const questions: DistinctQuestion[] = [];
+
+  const files: { [key: string]: any } = {};
+
+  const FILE_RE = /(^.*\.(json|yml|yaml))\[(_)\]/;
+  scriptParams.map(param => {
+    const match = param.match(FILE_RE);
+    if (match) {
+      const [, filename, ext, path] = match;
+      // console.log(`${param}: ${filename} - ${path}`);
+      if (!files[filename]) {
+        if (ext === 'json') {
+          const file = fs.readFileSync(filename, 'utf-8');
+          files[filename] = JSON.parse(file);
+        } else if (ext === 'yaml' || ext === 'yml') {
+          const file = fs.readFileSync(filename, 'utf-8');
+          files[filename] = YAML.parse(file);
+        }
+      }
+
+      const options = getPathValues(files[filename], topath(path));
+      questions.push({
+        type: 'checkbox',
+        message: `Input: `,
+        name: 'q1',
+        choices: options
+      });
+    }
+  });
+
+  return questions;
 }
 
 async function main() {
@@ -18,23 +50,18 @@ async function main() {
 
   const scriptName: string = assertString(process.env.npm_lifecycle_event);
   const script = pkg.scripts[scriptName];
-
-  const questions = pkg.sqrypt?.[scriptName]?.questions;
-
   const args = hideBin(process.argv);
-
   const scriptParams = script.split(/\s+/).slice(1);
   const input = args.slice(scriptParams.length);
 
-  // console.log("script: ", script);
-  // console.log("args: ", args);
-  // console.log(script.split(/\s+/).slice(1));
-  // console.log({scriptParams});
-  // console.log({input});
+  // console.log(scriptParams);
 
-  const prompt = await inquirer.prompt<{ [key: string | number]: string }>(questions);
+  const questions = gatherQuestions(pkg, scriptName, scriptParams);
 
-  // const OPTION_RE = /\{([0-9]+)\}/
+  const prompt = questions 
+    ? await inquirer.prompt<{ [key: string | number]: string }>(questions) 
+    : {};
+
   const OPTION_RE = /%(\d+)/
   const command = scriptParams.map((option: string) => {
     const match = option.match(OPTION_RE);
