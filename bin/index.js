@@ -14,40 +14,70 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs_1 = __importDefault(require("fs"));
+const crypto_1 = __importDefault(require("crypto"));
 const cross_spawn_1 = require("cross-spawn");
 const helpers_1 = require("yargs/helpers");
 const inquirer_1 = __importDefault(require("inquirer"));
 const yaml_1 = __importDefault(require("yaml"));
 const lodash_topath_1 = __importDefault(require("lodash.topath"));
 const utils_1 = require("./utils");
-function gatherQuestions(pkg, scriptName, scriptParams) {
+;
+function isParameter(input) {
+    // Params start with '%'. They cannot end with '%' because that is an environment variable on windows.
+    return input[0] === '%' && input[input.length - 1] !== '%';
+}
+function gatherParams(pkg, scriptName, scriptParams, input) {
     // const questions = pkg.sqrypt?.[scriptName]?.questions;
     // return questions;
     const questions = [];
     const files = {};
-    const FILE_RE = /(^.*\.(json|yml|yaml))\[(_)\]/;
+    const OPTION_RE = /%(\d+)$/;
+    const FILE_RE = /^%(.*\.(json|yml|yaml))\[(_)\]/;
     scriptParams.map(param => {
-        const match = param.match(FILE_RE);
-        if (match) {
-            const [, filename, ext, path] = match;
-            // console.log(`${param}: ${filename} - ${path}`);
-            if (!files[filename]) {
-                if (ext === 'json') {
-                    const file = fs_1.default.readFileSync(filename, 'utf-8');
-                    files[filename] = JSON.parse(file);
-                }
-                else if (ext === 'yaml' || ext === 'yml') {
-                    const file = fs_1.default.readFileSync(filename, 'utf-8');
-                    files[filename] = yaml_1.default.parse(file);
-                }
+        if (isParameter(param)) {
+            const id = crypto_1.default.randomBytes(12).toString('hex');
+            // Check if the param references a file.
+            let match;
+            if (match = param.match(OPTION_RE)) {
+                const index = Number(match[1]);
+                const answer = input[index];
+                questions.push({
+                    id,
+                    name: param,
+                    answer,
+                    index,
+                    question: {
+                        type: 'input',
+                        message: param,
+                        name: id
+                    }
+                });
             }
-            const options = (0, utils_1.getPathValues)(files[filename], (0, lodash_topath_1.default)(path));
-            questions.push({
-                type: 'checkbox',
-                message: `Input: `,
-                name: 'q1',
-                choices: options
-            });
+            if (match = param.match(FILE_RE)) {
+                const [, filename, ext, path] = match;
+                // console.log(`${param}: ${filename} - ${path}`);
+                if (!files[filename]) {
+                    if (ext === 'json') {
+                        const file = fs_1.default.readFileSync(filename, 'utf-8');
+                        files[filename] = JSON.parse(file);
+                    }
+                    else if (ext === 'yaml' || ext === 'yml') {
+                        const file = fs_1.default.readFileSync(filename, 'utf-8');
+                        files[filename] = yaml_1.default.parse(file);
+                    }
+                }
+                const options = (0, utils_1.getPathValues)(files[filename], (0, lodash_topath_1.default)(path));
+                questions.push({
+                    id,
+                    name: param,
+                    question: {
+                        type: 'list',
+                        message: param,
+                        name: id,
+                        choices: options
+                    }
+                });
+            }
         }
     });
     return questions;
@@ -60,19 +90,24 @@ function main() {
         const args = (0, helpers_1.hideBin)(process.argv);
         const scriptParams = script.split(/\s+/).slice(1);
         const input = args.slice(scriptParams.length);
-        // console.log(scriptParams);
-        const questions = gatherQuestions(pkg, scriptName, scriptParams);
+        const params = gatherParams(pkg, scriptName, scriptParams, input);
+        const questions = params.reduce((acc, param) => {
+            if (param.answer) {
+                return acc;
+            }
+            return acc.concat(param.question);
+        }, []);
         const prompt = questions
             ? yield inquirer_1.default.prompt(questions)
             : {};
-        const OPTION_RE = /%(\d+)/;
         const command = scriptParams.map((option) => {
-            const match = option.match(OPTION_RE);
-            if (match) {
-                const idx = Number(match[1]);
-                return input[idx] || prompt[idx];
+            const param = params.find(param => param.name === option);
+            if (param) {
+                return param.answer || prompt[param.id];
             }
-            return option;
+            else {
+                return option;
+            }
         });
         const proc = (0, cross_spawn_1.spawn)(command[0], command.slice(1), {
             stdio: 'inherit'

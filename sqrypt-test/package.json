@@ -7,8 +7,9 @@
     "jest": "sqrypt jest",
     "jest:spec": "sqrypt jest %1",
     "reverse-args": "sqrypt echo %1 %0",
+    "repeat-args": "sqrypt echo %0 %0",
     "input-command": "sqrypt %2 %1 %0",
-    "choose-from-list": "sqrypt echo ./package.json[_]?"
+    "choose-from-list": "sqrypt echo %./package.json[_]?"
   },
   "sqrypt": {
     "reverse-args": {
