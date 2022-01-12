@@ -1,91 +1,13 @@
 #!/usr/bin/env node
 
 import fs from 'fs';
-import crypto from 'crypto';
 import { spawn } from 'cross-spawn';
 import { hideBin } from 'yargs/helpers';
-import inquirer, { DistinctQuestion, QuestionCollection } from 'inquirer';
-import YAML from 'yaml';
-import topath from 'lodash.topath';
-import { assertString, getPathValues } from './utils';
-import { OPTION_RE, FILE_RE } from './regex';
-
-interface Parameter {
-  id: string,
-  name: string,
-  question: DistinctQuestion,
-  index?: number,
-  answer?: string
-};
+import inquirer, { DistinctQuestion } from 'inquirer';
+import { assertString } from './utils';
+import { gatherParams, sortParams } from './params';
 
 // TODO: Construct question.
-// TODO: Question ordering.
-
-function isParameter(input: string) {
-  // Params start with '%'. They cannot end with '%' because that is an environment variable on windows.
-  return input[0] === '%' && input[input.length-1] !== '%';
-}
-
-function gatherParams(pkg: Record<any, any>, scriptName: string, scriptParams: string[], input: string[]) {
-  const params: Record<string, Parameter> = {};
-
-  const files: { [key: string]: any } = {};
-
-  scriptParams.forEach(param => {
-    if (params[param]) {
-      return;
-    }
-    if (isParameter(param)) {
-      const id = crypto.randomBytes(12).toString('hex');
-
-      // Check if the param references a file.
-      let match;
-      if (match = param.match(OPTION_RE)) {
-        const index = Number(match[1]);
-        const answer = input[index];
-        params[param] = {
-          id,
-          name: param,
-          answer,
-          index,
-          question: {
-            type: 'input',
-            message: param,
-            name: id
-          }
-        }; 
-      }
-
-      if (match = param.match(FILE_RE)) {
-        const [, filename, ext, path] = match;
-        // console.log(`${param}: ${filename} - ${path}`);
-        if (!files[filename]) {
-          if (ext === 'json') {
-            const file = fs.readFileSync(filename, 'utf-8');
-            files[filename] = JSON.parse(file);
-          } else if (ext === 'yaml' || ext === 'yml') {
-            const file = fs.readFileSync(filename, 'utf-8');
-            files[filename] = YAML.parse(file);
-          }
-        }
-
-        const options = getPathValues(files[filename], topath(path));
-        params[param] = {
-          id,
-          name: param,
-          question: {
-            type: 'list',
-            message: param,
-            name: id,
-            choices: options
-          }
-        };
-      }
-    }
-  });
-
-  return params;
-}
 
 async function main() {
   const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf-8'));
@@ -98,7 +20,7 @@ async function main() {
 
   const params = gatherParams(pkg, scriptName, scriptParams, input);
 
-  const questions = Object.values(params).reduce<DistinctQuestion[]>((acc, param) => {
+  const questions = sortParams(params).reduce<DistinctQuestion[]>((acc, param) => {
     if (param.answer) {
       return acc;
     }
@@ -110,7 +32,6 @@ async function main() {
     : {};
   
   const command = scriptParams.map((option: string) => {
-    // const param = params.find(param => param.name === option);
     const param = params[option];
     if (param) {
       return param.answer || prompt[param.id];

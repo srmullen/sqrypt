@@ -10,7 +10,8 @@
     "repeat-args": "sqrypt echo %0 %0",
     "input-command": "sqrypt %2 %1 %0",
     "choose-from-list": "sqrypt echo %{./package.json}[_]",
-    "read-yaml": "sqrypt echo %{./test-serverless.yml}.functions[_]"
+    "read-yaml": "sqrypt echo %{./test-serverless.yml}.functions[_]",
+    "test-order": "sqrypt echo %1 %{./package.json}[_] %0"
   },
   "sqrypt": {
     "reverse-args": {
