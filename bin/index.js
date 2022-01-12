@@ -21,27 +21,29 @@ const inquirer_1 = __importDefault(require("inquirer"));
 const yaml_1 = __importDefault(require("yaml"));
 const lodash_topath_1 = __importDefault(require("lodash.topath"));
 const utils_1 = require("./utils");
+const regex_1 = require("./regex");
 ;
+// TODO: Construct question.
+// TODO: Question ordering.
 function isParameter(input) {
     // Params start with '%'. They cannot end with '%' because that is an environment variable on windows.
     return input[0] === '%' && input[input.length - 1] !== '%';
 }
 function gatherParams(pkg, scriptName, scriptParams, input) {
-    // const questions = pkg.sqrypt?.[scriptName]?.questions;
-    // return questions;
-    const questions = [];
+    const params = {};
     const files = {};
-    const OPTION_RE = /%(\d+)$/;
-    const FILE_RE = /^%(.*\.(json|yml|yaml))\[(_)\]/;
-    scriptParams.map(param => {
+    scriptParams.forEach(param => {
+        if (params[param]) {
+            return;
+        }
         if (isParameter(param)) {
             const id = crypto_1.default.randomBytes(12).toString('hex');
             // Check if the param references a file.
             let match;
-            if (match = param.match(OPTION_RE)) {
+            if (match = param.match(regex_1.OPTION_RE)) {
                 const index = Number(match[1]);
                 const answer = input[index];
-                questions.push({
+                params[param] = {
                     id,
                     name: param,
                     answer,
@@ -51,9 +53,9 @@ function gatherParams(pkg, scriptName, scriptParams, input) {
                         message: param,
                         name: id
                     }
-                });
+                };
             }
-            if (match = param.match(FILE_RE)) {
+            if (match = param.match(regex_1.FILE_RE)) {
                 const [, filename, ext, path] = match;
                 // console.log(`${param}: ${filename} - ${path}`);
                 if (!files[filename]) {
@@ -67,7 +69,7 @@ function gatherParams(pkg, scriptName, scriptParams, input) {
                     }
                 }
                 const options = (0, utils_1.getPathValues)(files[filename], (0, lodash_topath_1.default)(path));
-                questions.push({
+                params[param] = {
                     id,
                     name: param,
                     question: {
@@ -76,11 +78,11 @@ function gatherParams(pkg, scriptName, scriptParams, input) {
                         name: id,
                         choices: options
                     }
-                });
+                };
             }
         }
     });
-    return questions;
+    return params;
 }
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -91,7 +93,7 @@ function main() {
         const scriptParams = script.split(/\s+/).slice(1);
         const input = args.slice(scriptParams.length);
         const params = gatherParams(pkg, scriptName, scriptParams, input);
-        const questions = params.reduce((acc, param) => {
+        const questions = Object.values(params).reduce((acc, param) => {
             if (param.answer) {
                 return acc;
             }
@@ -101,7 +103,8 @@ function main() {
             ? yield inquirer_1.default.prompt(questions)
             : {};
         const command = scriptParams.map((option) => {
-            const param = params.find(param => param.name === option);
+            // const param = params.find(param => param.name === option);
+            const param = params[option];
             if (param) {
                 return param.answer || prompt[param.id];
             }

@@ -8,6 +8,7 @@ import inquirer, { DistinctQuestion, QuestionCollection } from 'inquirer';
 import YAML from 'yaml';
 import topath from 'lodash.topath';
 import { assertString, getPathValues } from './utils';
+import { OPTION_RE, FILE_RE } from './regex';
 
 interface Parameter {
   id: string,
@@ -17,22 +18,23 @@ interface Parameter {
   answer?: string
 };
 
+// TODO: Construct question.
+// TODO: Question ordering.
+
 function isParameter(input: string) {
   // Params start with '%'. They cannot end with '%' because that is an environment variable on windows.
   return input[0] === '%' && input[input.length-1] !== '%';
 }
 
-function gatherParams(pkg: Record<any, any>, scriptName: string, scriptParams: string[], input: string[]): Parameter[] {
-  // const questions = pkg.sqrypt?.[scriptName]?.questions;
-  // return questions;
-
-  const questions: Parameter[] = [];
+function gatherParams(pkg: Record<any, any>, scriptName: string, scriptParams: string[], input: string[]) {
+  const params: Record<string, Parameter> = {};
 
   const files: { [key: string]: any } = {};
 
-  const OPTION_RE = /%(\d+)$/;
-  const FILE_RE = /^%(.*\.(json|yml|yaml))\[(_)\]/;
-  scriptParams.map(param => {
+  scriptParams.forEach(param => {
+    if (params[param]) {
+      return;
+    }
     if (isParameter(param)) {
       const id = crypto.randomBytes(12).toString('hex');
 
@@ -41,7 +43,7 @@ function gatherParams(pkg: Record<any, any>, scriptName: string, scriptParams: s
       if (match = param.match(OPTION_RE)) {
         const index = Number(match[1]);
         const answer = input[index];
-        questions.push({
+        params[param] = {
           id,
           name: param,
           answer,
@@ -51,7 +53,7 @@ function gatherParams(pkg: Record<any, any>, scriptName: string, scriptParams: s
             message: param,
             name: id
           }
-        });
+        }; 
       }
 
       if (match = param.match(FILE_RE)) {
@@ -68,7 +70,7 @@ function gatherParams(pkg: Record<any, any>, scriptName: string, scriptParams: s
         }
 
         const options = getPathValues(files[filename], topath(path));
-        questions.push({
+        params[param] = {
           id,
           name: param,
           question: {
@@ -77,12 +79,12 @@ function gatherParams(pkg: Record<any, any>, scriptName: string, scriptParams: s
             name: id,
             choices: options
           }
-        });
+        };
       }
     }
   });
 
-  return questions;
+  return params;
 }
 
 async function main() {
@@ -96,7 +98,7 @@ async function main() {
 
   const params = gatherParams(pkg, scriptName, scriptParams, input);
 
-  const questions = params.reduce<DistinctQuestion[]>((acc, param) => {
+  const questions = Object.values(params).reduce<DistinctQuestion[]>((acc, param) => {
     if (param.answer) {
       return acc;
     }
@@ -108,7 +110,8 @@ async function main() {
     : {};
   
   const command = scriptParams.map((option: string) => {
-    const param = params.find(param => param.name === option);
+    // const param = params.find(param => param.name === option);
+    const param = params[option];
     if (param) {
       return param.answer || prompt[param.id];
     } else {

@@ -1,0 +1,49 @@
+functions:
+  createCustomer:
+    handler: handlers/createCustomer.handler
+    events:
+      - http:
+          path: customers
+          method: post
+  getCustomer:
+    handler: handlers/getCustomer.handler
+    events:
+      - http:
+          path: customers/{username}
+          method: get
+  editAddressForCustomer:
+    handler: handlers/editAddressForCustomer.handler
+    events:
+      - http:
+          path: customers/{username}/addresses
+          method: post
+  deleteAddressForCustomer:
+    handler: handlers/deleteAddressForCustomer.handler
+    events:
+      - http:
+          path: customers/{username}/addresses/{name}
+          method: delete
+  createOrder:
+    handler: handlers/createOrder.handler
+    events:
+      - http:
+          path: customers/{username}/orders
+          method: post
+  updateStatusForOrder:
+    handler: handlers/updateStatusForOrder.handler
+    events:
+      - http:
+          path: customers/{username}/orders/{orderId}/status
+          method: post
+  getOrdersForCustomer:
+    handler: handlers/getOrdersForCustomer.handler
+    events:
+      - http:
+          path: customers/{username}/orders
+          method: get
+  getOrder:
+    handler: handlers/getOrder.handler
+    events:
+      - http:
+          path: customers/{username}/orders/{orderId}
+          method: get
