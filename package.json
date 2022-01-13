@@ -10,11 +10,17 @@
     "dev": "tsc --watch",
     "build": "tsc",
     "test": "jest",
-    "test:watch": "jest --watchAll"
+    "test:watch": "jest --watchAll",
+    "prepublish": "npm run build"
   },
   "keywords": [
     "npm",
-    "script"
+    "yarn",
+    "script",
+    "cli"
+  ],
+  "files": [
+    "bin"
   ],
   "author": "Sean Mullen",
   "license": "ISC",
