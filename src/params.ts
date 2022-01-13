@@ -2,6 +2,7 @@ import fs from 'fs';
 import crypto from 'crypto';
 import YAML from 'yaml';
 import topath from 'lodash.topath';
+import chalk from 'chalk';
 import type { DistinctQuestion } from 'inquirer';
 import { getPathValues } from './utils';
 import { OPTION_RE, FILE_RE } from './regex';
@@ -19,7 +20,19 @@ function isParameter(input: string) {
   return input[0] === '%' && input[input.length-1] !== '%';
 }
 
-export function gatherParams(pkg: Record<any, any>, scriptName: string, scriptParams: string[], input: string[]) {
+function createMessage(scriptParams: string[], currentParam: string) {
+  return scriptParams.reduce((message, param) => {
+    if (!isParameter(param)) {
+      return `${message}${param} `;
+    }
+    if (param === currentParam) {
+      return `${message}${chalk.green('_____')} `;
+    }
+    return `${message}${chalk.bgMagenta('     ')} `;
+  }, '');
+}
+
+export function gatherParams(scriptParams: string[], input: string[]): Record<string, Parameter> {
   const params: Record<string, Parameter> = {};
 
   const files: { [key: string]: any } = {};
@@ -48,7 +61,7 @@ export function gatherParams(pkg: Record<any, any>, scriptName: string, scriptPa
           index,
           question: {
             type: 'input',
-            message: param,
+            message: createMessage(scriptParams, param),
             name: id
           }
         }; 
@@ -75,7 +88,7 @@ export function gatherParams(pkg: Record<any, any>, scriptName: string, scriptPa
           index: indexTracker,
           question: {
             type: 'list',
-            message: param,
+            message: createMessage(scriptParams, param),
             name: id,
             choices: options
           }
@@ -86,6 +99,8 @@ export function gatherParams(pkg: Record<any, any>, scriptName: string, scriptPa
 
   return params;
 }
+
+
 
 export function sortParams(params: Record<string, Parameter>): Parameter[] {
   const sorted = Object.values(params);

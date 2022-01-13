@@ -8,6 +8,7 @@ const fs_1 = __importDefault(require("fs"));
 const crypto_1 = __importDefault(require("crypto"));
 const yaml_1 = __importDefault(require("yaml"));
 const lodash_topath_1 = __importDefault(require("lodash.topath"));
+const chalk_1 = __importDefault(require("chalk"));
 const utils_1 = require("./utils");
 const regex_1 = require("./regex");
 ;
@@ -15,7 +16,18 @@ function isParameter(input) {
     // Params start with '%'. They cannot end with '%' because that is an environment variable on windows.
     return input[0] === '%' && input[input.length - 1] !== '%';
 }
-function gatherParams(pkg, scriptName, scriptParams, input) {
+function createMessage(scriptParams, currentParam) {
+    return scriptParams.reduce((message, param) => {
+        if (!isParameter(param)) {
+            return `${message}${param} `;
+        }
+        if (param === currentParam) {
+            return `${message}${chalk_1.default.green('_____')} `;
+        }
+        return `${message}${chalk_1.default.bgMagenta('     ')} `;
+    }, '');
+}
+function gatherParams(scriptParams, input) {
     const params = {};
     const files = {};
     scriptParams.forEach(param => {
@@ -40,7 +52,7 @@ function gatherParams(pkg, scriptName, scriptParams, input) {
                     index,
                     question: {
                         type: 'input',
-                        message: param,
+                        message: createMessage(scriptParams, param),
                         name: id
                     }
                 };
@@ -66,7 +78,7 @@ function gatherParams(pkg, scriptName, scriptParams, input) {
                     index: indexTracker,
                     question: {
                         type: 'list',
-                        message: param,
+                        message: createMessage(scriptParams, param),
                         name: id,
                         choices: options
                     }

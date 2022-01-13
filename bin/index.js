@@ -19,7 +19,6 @@ const helpers_1 = require("yargs/helpers");
 const inquirer_1 = __importDefault(require("inquirer"));
 const utils_1 = require("./utils");
 const params_1 = require("./params");
-// TODO: Construct question.
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
         const pkg = JSON.parse(fs_1.default.readFileSync('./package.json', 'utf-8'));
@@ -28,7 +27,7 @@ function main() {
         const args = (0, helpers_1.hideBin)(process.argv);
         const scriptParams = script.split(/\s+/).slice(1);
         const input = args.slice(scriptParams.length);
-        const params = (0, params_1.gatherParams)(pkg, scriptName, scriptParams, input);
+        const params = (0, params_1.gatherParams)(scriptParams, input);
         const questions = (0, params_1.sortParams)(params).reduce((acc, param) => {
             if (param.answer) {
                 return acc;

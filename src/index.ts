@@ -7,8 +7,6 @@ import inquirer, { DistinctQuestion } from 'inquirer';
 import { assertString } from './utils';
 import { gatherParams, sortParams } from './params';
 
-// TODO: Construct question.
-
 async function main() {
   const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf-8'));
 
@@ -18,7 +16,7 @@ async function main() {
   const scriptParams = script.split(/\s+/).slice(1);
   const input = args.slice(scriptParams.length);
 
-  const params = gatherParams(pkg, scriptName, scriptParams, input);
+  const params = gatherParams(scriptParams, input);
 
   const questions = sortParams(params).reduce<DistinctQuestion[]>((acc, param) => {
     if (param.answer) {
